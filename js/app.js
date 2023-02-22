@@ -5,9 +5,18 @@ const cdThumb = $(".cd-thumb")
 const audio = $("#audio")
 const play = $(".player")
 const btnStart = $('.btn-toggle-play')
+const progress = $("#progress")
+const lineProgress = $(".progress::-webkit-slider-thumb")
+const btnNext = $('.btn-next')
+const btnPrev = $('.btn-prev')
+const btnRandom = $('.btn-random')
+const btnRepeat = $('.btn-repeat')
+
 const app = {
     indexCurrent: 0,
     isCheckplaying: false,
+    isRandom: false,
+    isRepeat: false,
     songs: [
         {
             name: 'Bang Bang Bang',
@@ -88,9 +97,9 @@ const app = {
         },
     ],
     render: function () {
-        const htmls = this.songs.map(song => {
+        const htmls = this.songs.map((song,index) => {
             return `
-            <div class="song">
+            <div class="song" id="${index}">
                 <div class="thumb" 
                     style="background-image: url('${song.image}')">
                 </div>
@@ -105,6 +114,7 @@ const app = {
             `
         })
         $('.playlist').innerHTML = htmls.join("")
+       
     },
     defineProperties: function () {
         Object.defineProperty(this, "currentSong", {
@@ -118,8 +128,47 @@ const app = {
         heading.textContent = this.currentSong.name
         cdThumb.style.backgroundImage = `url('${this.currentSong.image}')`
         audio.src = this.currentSong.path
-        console.log(heading, cdThumb, audio)
-
+    
+    },
+    nextSong: function () {
+        this.indexCurrent++
+        if (this.indexCurrent >= this.songs.length) {
+            this.indexCurrent = 0
+        }
+        this.loadCurrentSong()
+    },
+    prevSong: function () {
+        this.indexCurrent--
+        if (this.indexCurrent < 0) {
+            this.indexCurrent = this.songs.length - 1
+        }
+        this.loadCurrentSong()
+    },
+    randomSong: function () {
+        let newindexCurrent
+        do {
+            newindexCurrent = Math.floor(Math.random() * this.songs.length)
+        }
+        while (newindexCurrent == this.indexCurrent)
+        this.indexCurrent = newindexCurrent
+        this.loadCurrentSong()
+    },
+    repeatSong: function () {
+        this.loadCurrentSong()
+    },
+    activeSong : function (){
+        
+         const song = this.songs.map((song,index) =>{
+            if (index == this.indexCurrent )
+            {
+                document.getElementById(index).classList.add('active')
+                return song
+            }
+                return null
+        } )
+        const songActive = $('.song.active')
+        console.log(songActive)
+        
     },
     handleEvents: function () {
         // Xử lý scroll bài hát
@@ -132,7 +181,14 @@ const app = {
             cd.style.width = newWidth > 0 ? newWidth + 'px' : 0
             cd.style.opacity = newWidth / cdWidth
         }
-        // Xử lý click btn play
+        //Xử lý cd quay/ dừng
+        const cdThumbAnimate = cdThumb.animate([{
+            transform: 'rotate(360deg)'
+        }], {
+            duration: 10000, // 10 seconds
+            iterations: Infinity
+        })
+        cdThumbAnimate.pause()
         // Xử lý click btn start
         btnStart.onclick = function () {
             if (_this.isCheckplaying) {
@@ -141,24 +197,81 @@ const app = {
             else {
                 audio.play()
             }
-            audio.onplay = function () {
-                _this.isCheckplaying = true
-                play.classList.add('playing')
+        }
+        audio.onplay = function () {
+            _this.isCheckplaying = true
+            play.classList.add('playing')
+            cdThumbAnimate.play()
+        }
+        audio.onpause = function () {
+            _this.isCheckplaying = false
+            play.classList.remove('playing')
+            cdThumbAnimate.pause()
+        }
+        // Xu ly progress chạy theo current time    
+        audio.ontimeupdate = function () {
+            if (audio.duration) {
+                const progressPercent = Math.floor(audio.currentTime / audio.duration * 100)
+                progress.value = progressPercent
             }
-            audio.onpause = function () {
-                _this.isCheckplaying = false
-                play.classList.remove('playing')
+        }
+        // Xu ly tua thanh progress
+        progress.oninput = function (e) {
+            const seekTime = (e.target.value * audio.duration / 100)
+            audio.currentTime = seekTime
+            //progress.style.width = (e.target.value/100*progress.offsetWidth) +'px'
+        }
+        // Xử lý btn random
+        btnRandom.onclick = function () {
+            _this.isRandom = !_this.isRandom
+            btnRandom.classList.toggle('active', _this.isRandom)
+        }
+        // Xử lý btn repeat
+        btnRepeat.onclick = function () {
+            _this.isRepeat = !_this.isRepeat
+            btnRepeat.classList.toggle('active', _this.isRepeat)
+        }
+        // Xử lý click button next 
+        btnNext.onclick = function () {
+            $('.song.active').classList.remove('active')
+            if (_this.isRandom) {
+                _this.randomSong()
             }
-
-
+            else if (_this.isRepeat) {
+                _this.repeatSong()
+            }
+            else {
+                _this.nextSong()
+            }
+            audio.play()
+            _this.activeSong()
+        }
+        // Xử lý click button prev
+        btnPrev.onclick = function () {
+            $('.song.active').classList.remove('active')
+            if (_this.isRandom) {
+                _this.randomSong()
+            }
+            else if (_this.isRepeat) {
+                _this.repeatSong()
+            }   
+            else {
+                _this.prevSong()
+            }
+            audio.play()
+            _this.activeSong()
+        }
+        // Xử lý khi end song
+        audio.onended = function () {
+            btnNext.onclick()
         }
     },
     start: function () {
         this.defineProperties()// get current song
         this.handleEvents()// lắng nghe sư kiện của DOM events
         this.loadCurrentSong()
-
         this.render()
+        this.activeSong()
     }
 }
 app.start()

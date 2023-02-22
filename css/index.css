@@ -83,18 +83,19 @@
     display: flex;
     align-items: center;
     justify-content: space-around;
-    padding: 18px 0 8px 0;
+    padding: 18px 0 6px 0;
   }
   
   .control .btn {
     color: #666;
-    padding: 18px;
+    padding: 20px;
     font-size: 18px;
   }
   
   .control .btn.active {
     color: var(--primary-color);
   }
+  
   
   .control .btn-toggle-play {
     width: 56px;
